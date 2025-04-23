@@ -169,3 +169,4 @@ if st.session_state['Scanned']:
                 plt.tight_layout()
 
                 st.pyplot(plt)
+        st.write("Sumber data: Yahoo Finance (via yfinance)")
