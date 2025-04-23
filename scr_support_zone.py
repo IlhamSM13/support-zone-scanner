@@ -132,7 +132,7 @@ if st.session_state['Scanned']:
     selected_ticker = st.selectbox("Pilih Emiten:", sorted(emiten_list))
 
     if selected_ticker:
-        st.write(f"Menampilkan visualisasi untuk: **{selected_ticker}**")
+        # st.write(f"Menampilkan visualisasi untuk: **{selected_ticker}**")
 
         ticker_full = selected_ticker + ".JK"
 
