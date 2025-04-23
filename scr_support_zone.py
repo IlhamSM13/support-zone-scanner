@@ -129,7 +129,7 @@ if st.session_state['Scanned']:
 
     # Buat selectbox-nya
     
-    selected_ticker = st.selectbox("Pilih Emiten", sorted(emiten_list))
+    selected_ticker = st.selectbox("Pilih Emiten:", sorted(emiten_list))
 
     if selected_ticker:
         st.write(f"Menampilkan visualisasi untuk: **{selected_ticker}**")
