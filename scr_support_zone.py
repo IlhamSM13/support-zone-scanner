@@ -234,6 +234,18 @@ if st.session_state['Scanned']:
                     st.error("Data weekly tidak tersedia.")
                 else:
                     fig_weekly = plot_candlestick(data_weekly, f"Weekly Candlestick (1 Year) - {selected_ticker}")
+                    
+                    # Tambahkan garis support dari analisis harian
+                    for idx, (date, price) in enumerate(support_levels):
+                        fig_weekly.add_hline(
+                            y=price, 
+                            line_dash="dot", 
+                            line_color="green",
+                            opacity=0.5,
+                            annotation_text=f"Support {price:.0f}" if idx == 0 else None,
+                            annotation_position="bottom right"
+                        )
+                    
                     st.plotly_chart(fig_weekly, use_container_width=True)
 
         st.write("Sumber data: Yahoo Finance (via yfinance)")
