@@ -23,6 +23,18 @@ def identify_support_levels(low_series, current_close, window=10):
     valid_supports = [(date, level) for (date, level) in support_levels if abs(current_close - level) / current_close <= 0.05]
     return valid_supports
 
+# Fungsi Menampilkan Garis Support
+def draw_support(fig, support_levels):
+    for idx, (date, price) in enumerate(support_levels):
+        fig.add_hline(
+            y=price, 
+            line_dash="dot", 
+            line_color="green",
+            opacity=0.5,
+            annotation_text=f"Support {price:.0f}" if idx == 0 else None,
+            annotation_position="bottom right"
+        )
+
 # Fungsi untuk plot candlestick
 def plot_candlestick(data, title):
     if isinstance(data.columns, pd.MultiIndex):
@@ -100,7 +112,7 @@ st.markdown(
 st.markdown(
     """
     <div style='text-align: justify; font-size: 16px; line-height: 1.6; padding: 10px 15px; background-color: #f9f9f9; border-radius: 8px;'>
-        Fitur ini bertujuan membantu kamu menyaring saham-saham yang sedang berada dekat dengan zona support, yaitu dalam rentang ±5% dari harga penutupan terakhir terhadap level support terdekat. 
+        Fitur ini bertujuan membantu kamu menyaring saham-saham yang sedang berada dekat dengan zona support, yaitu dalam rentang ±10% dari harga penutupan terakhir terhadap level support terdekat. 
         Zona support ditentukan berdasarkan pola harga terendah historis harian dalam periode 20 hari, yang mencerminkan potensi area pantulan harga. 
         Harap diingat bahwa alat ini tidak dimaksudkan sebagai pedoman investasi mutlak, melainkan sebagai pelengkap dalam proses analisis teknikal.
     </div>
@@ -178,32 +190,19 @@ if st.session_state['Scanned']:
             
             with tab1:
                 # Ambil data saham yang dipilih
-                data_daily = yf.download(ticker_full, period="6mo", interval="1d", progress=False)
+                data_daily = yf.download(
+                    ticker_full,
+                    period='6mo',
+                    interval='1d',
+                    progress=False
+                )
 
-                if data_daily.empty or len(data_daily) < 2:
-                    st.error("Data tidak cukup untuk divisualisasikan.")
+                if data_daily.empty:
+                    st.error("Data daily tidak tersedia.")
                 else:
-                    # Visualisasi Support Zone Daily
-                    plt.figure(figsize=(14, 7))
-                    plt.plot(data_daily.index, data_daily['Close'], label='Harga Penutupan', color='blue', alpha=0.5)
-                    plt.title(f'Zona Support Saham {selected_ticker}', fontsize=16)
-                    plt.xlabel('Tanggal', fontsize=12)
-                    plt.ylabel('Harga (IDR)', fontsize=12)
-
-                    for idx, (date, price) in enumerate(support_levels):
-                        plt.axhline(y=price, color='green', linestyle='--', alpha=0.5,
-                                    label=f'Support {price:.0f}' if idx == 0 else "")
-                        plt.fill_between(data_daily.index, price*0.98, price*1.02, color='green', alpha=0.1)
-
-                    # Atur legenda agar tidak duplikat
-                    handles, labels = plt.gca().get_legend_handles_labels()
-                    by_label = dict(zip(labels, handles))
-                    plt.legend(by_label.values(), by_label.keys())
-
-                    plt.grid(True, linestyle='--', alpha=0.7)
-                    plt.tight_layout()
-
-                    st.pyplot(plt)
+                    fig_daily = plot_candlestick(data_daily, f"Daily Candlestick (6 Months) - {selected_ticker}")
+                    draw_support(fig_daily, support_levels)
+                    st.plotly_chart(fig_daily, use_container_width=True)
             
             with tab2:
                 # Data hourly (1 bulan terakhir)
@@ -219,18 +218,7 @@ if st.session_state['Scanned']:
                     st.error("Data hourly tidak tersedia.")
                 else:
                     fig_hourly = plot_candlestick(data_hourly, f"Hourly Candlestick (14 Days) - {selected_ticker}")
-
-                    # Tambahkan garis support dari analisis harian
-                    for idx, (date, price) in enumerate(support_levels):
-                        fig_hourly.add_hline(
-                            y=price, 
-                            line_dash="dot", 
-                            line_color="green",
-                            opacity=0.5,
-                            annotation_text=f"Support {price:.0f}" if idx == 0 else None,
-                            annotation_position="bottom right"
-                        )
-                    
+                    draw_support(fig_hourly, support_levels)
                     st.plotly_chart(fig_hourly, use_container_width=True)
             
             with tab3:
@@ -246,18 +234,7 @@ if st.session_state['Scanned']:
                     st.error("Data weekly tidak tersedia.")
                 else:
                     fig_weekly = plot_candlestick(data_weekly, f"Weekly Candlestick (1 Year) - {selected_ticker}")
-                    
-                    # Tambahkan garis support dari analisis harian
-                    for idx, (date, price) in enumerate(support_levels):
-                        fig_weekly.add_hline(
-                            y=price, 
-                            line_dash="dot", 
-                            line_color="green",
-                            opacity=0.5,
-                            annotation_text=f"Support {price:.0f}" if idx == 0 else None,
-                            annotation_position="bottom right"
-                        )
-                    
+                    draw_support(fig_weekly, support_levels)
                     st.plotly_chart(fig_weekly, use_container_width=True)
 
         st.write("Sumber data: Yahoo Finance (via yfinance)")
