@@ -222,7 +222,7 @@ if st.session_state['Scanned']:
 
                     # Tambahkan garis support dari analisis harian
                     for idx, (date, price) in enumerate(support_levels):
-                        fig_weekly.add_hline(
+                        fig_hourly.add_hline(
                             y=price, 
                             line_dash="dot", 
                             line_color="green",
