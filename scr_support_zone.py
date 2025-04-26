@@ -1,8 +1,10 @@
 import streamlit as st
 import pandas as pd
 import matplotlib.pyplot as plt
+import plotly.graph_objects as go
 import yfinance as yf
 import os
+from datetime import datetime, timedelta
 
 # Fungsi Identifikasi Support Level
 def identify_support_levels(low_series, current_close, window=10):
@@ -18,8 +20,41 @@ def identify_support_levels(low_series, current_close, window=10):
             if (price < low_series.iloc[i-window:i]).all() and (price < low_series.iloc[i+1:i+1+window]).all():
                 support_levels.append((low_series.index[i], price))
 
-    valid_supports = [(date, level) for (date, level) in support_levels if abs(current_close - level) / current_close <= 0.1]
+    valid_supports = [(date, level) for (date, level) in support_levels if abs(current_close - level) / current_close <= 0.05]
     return valid_supports
+
+# Fungsi untuk plot candlestick
+def plot_candlestick(data, title):
+    if isinstance(data.columns, pd.MultiIndex):
+        data.columns = data.columns.droplevel(0)
+    
+    clean_data = pd.DataFrame({
+        'Datetime': data.index,
+        'Open': data['Open'].values if 'Open' in data else data.iloc[:,0],
+        'High': data['High'].values if 'High' in data else data.iloc[:,1],
+        'Low': data['Low'].values if 'Low' in data else data.iloc[:,2],
+        'Close': data['Close'].values if 'Close' in data else data.iloc[:,3],
+        'Volume': data['Volume'].values if 'Volume' in data else data.iloc[:,4]
+    })
+
+    fig = go.Figure(data=[go.Candlestick(
+        x=clean_data['Datetime'],
+        open=clean_data['Open'],
+        high=clean_data['High'],
+        low=clean_data['Low'],
+        close=clean_data['Close']
+    )])
+
+    # 5. Atur layout
+    fig.update_layout(
+        title=title,
+        xaxis_title='Date',
+        yaxis_title='Price (IDR)',
+        xaxis_rangeslider_visible=False,
+        template='plotly_white'
+    )
+
+    return fig
 
 # Fungsi looping setiap saham terhadap identifikasi support level
 def process_stock(ticker):
@@ -99,7 +134,6 @@ if st.session_state['Scanned']:
             valid_ticker.append(result)
         else:
             error_messages.append(err_msg)
-            ## st.warning(err_msg)
 
     example = []
 
@@ -122,18 +156,15 @@ if st.session_state['Scanned']:
         unsafe_allow_html=True
     )
 
-    st.dataframe(df, use_container_width=True)
+    st.dataframe(df, use_container_width=True, hide_index=True)
 
     # Buat list unik emiten dari example
-    emiten_list = list({item['Emiten'] for item in example})  # pakai set agar unik, lalu ubah ke list
+    emiten_list = list({item['Emiten'] for item in example})
 
     # Buat selectbox-nya
-    
     selected_ticker = st.selectbox("Pilih Emiten:", sorted(emiten_list))
 
     if selected_ticker:
-        # st.write(f"Menampilkan visualisasi untuk: **{selected_ticker}**")
-
         ticker_full = selected_ticker + ".JK"
 
         # Cari support level yang sesuai
@@ -142,31 +173,67 @@ if st.session_state['Scanned']:
         if support_levels is None:
             st.warning("Support level untuk emiten ini tidak ditemukan.")
         else:
-            # Ambil data saham yang dipilih
-            data = yf.download(ticker_full, period="6mo", interval="1d", progress=False)
+            # Tab layout untuk multi-timeframe
+            tab1, tab2, tab3 = st.tabs(["Daily (Support)", "Hourly (1 Month)", "Weekly (1 Year)"])
+            
+            with tab1:
+                # Ambil data saham yang dipilih
+                data_daily = yf.download(ticker_full, period="6mo", interval="1d", progress=False)
 
-            if data.empty or len(data) < 2:
-                st.error("Data tidak cukup untuk divisualisasikan.")
-            else:
-                # Visualisasi
-                plt.figure(figsize=(14, 7))
-                plt.plot(data.index, data['Close'], label='Harga Penutupan', color='blue', alpha=0.5)
-                plt.title(f'Zona Support Saham {selected_ticker}', fontsize=16)
-                plt.xlabel('Tanggal', fontsize=12)
-                plt.ylabel('Harga (IDR)', fontsize=12)
+                if data_daily.empty or len(data_daily) < 2:
+                    st.error("Data tidak cukup untuk divisualisasikan.")
+                else:
+                    # Visualisasi Support Zone Daily
+                    plt.figure(figsize=(14, 7))
+                    plt.plot(data_daily.index, data_daily['Close'], label='Harga Penutupan', color='blue', alpha=0.5)
+                    plt.title(f'Zona Support Saham {selected_ticker}', fontsize=16)
+                    plt.xlabel('Tanggal', fontsize=12)
+                    plt.ylabel('Harga (IDR)', fontsize=12)
 
-                for idx, (date, price) in enumerate(support_levels):
-                    plt.axhline(y=price, color='green', linestyle='--', alpha=0.5,
-                                label=f'Support {price:.0f}' if idx == 0 else "")
-                    plt.fill_between(data.index, price*0.98, price*1.02, color='green', alpha=0.1)
+                    for idx, (date, price) in enumerate(support_levels):
+                        plt.axhline(y=price, color='green', linestyle='--', alpha=0.5,
+                                    label=f'Support {price:.0f}' if idx == 0 else "")
+                        plt.fill_between(data_daily.index, price*0.98, price*1.02, color='green', alpha=0.1)
 
-                # Atur legenda agar tidak duplikat
-                handles, labels = plt.gca().get_legend_handles_labels()
-                by_label = dict(zip(labels, handles))
-                plt.legend(by_label.values(), by_label.keys())
+                    # Atur legenda agar tidak duplikat
+                    handles, labels = plt.gca().get_legend_handles_labels()
+                    by_label = dict(zip(labels, handles))
+                    plt.legend(by_label.values(), by_label.keys())
 
-                plt.grid(True, linestyle='--', alpha=0.7)
-                plt.tight_layout()
+                    plt.grid(True, linestyle='--', alpha=0.7)
+                    plt.tight_layout()
 
-                st.pyplot(plt)
+                    st.pyplot(plt)
+            
+            with tab2:
+                # Data hourly (1 bulan terakhir)
+                data_hourly = yf.download(
+                    ticker_full, 
+                    start=datetime.now() - timedelta(days=14), 
+                    end=datetime.now(), 
+                    interval="1h", 
+                    progress=False
+                )
+                
+                if data_hourly.empty:
+                    st.error("Data hourly tidak tersedia.")
+                else:
+                    fig_hourly = plot_candlestick(data_hourly, f"Hourly Candlestick (14 Days) - {selected_ticker}")
+                    st.plotly_chart(fig_hourly, use_container_width=True)
+            
+            with tab3:
+                # Data weekly (1 tahun terakhir)
+                data_weekly = yf.download(
+                    ticker_full, 
+                    period="1y", 
+                    interval="1wk", 
+                    progress=False
+                )
+                
+                if data_weekly.empty:
+                    st.error("Data weekly tidak tersedia.")
+                else:
+                    fig_weekly = plot_candlestick(data_weekly, f"Weekly Candlestick (1 Year) - {selected_ticker}")
+                    st.plotly_chart(fig_weekly, use_container_width=True)
+
         st.write("Sumber data: Yahoo Finance (via yfinance)")
