@@ -219,6 +219,18 @@ if st.session_state['Scanned']:
                     st.error("Data hourly tidak tersedia.")
                 else:
                     fig_hourly = plot_candlestick(data_hourly, f"Hourly Candlestick (14 Days) - {selected_ticker}")
+
+                    # Tambahkan garis support dari analisis harian
+                    for idx, (date, price) in enumerate(support_levels):
+                        fig_weekly.add_hline(
+                            y=price, 
+                            line_dash="dot", 
+                            line_color="green",
+                            opacity=0.5,
+                            annotation_text=f"Support {price:.0f}" if idx == 0 else None,
+                            annotation_position="bottom right"
+                        )
+                    
                     st.plotly_chart(fig_hourly, use_container_width=True)
             
             with tab3:
