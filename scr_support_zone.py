@@ -100,7 +100,7 @@ st.markdown(
 st.markdown(
     """
     <div style='text-align: justify; font-size: 16px; line-height: 1.6; padding: 10px 15px; background-color: #f9f9f9; border-radius: 8px;'>
-        Fitur ini bertujuan membantu kamu menyaring saham-saham yang sedang berada dekat dengan zona support, yaitu dalam rentang ±10% dari harga penutupan terakhir terhadap level support terdekat. 
+        Fitur ini bertujuan membantu kamu menyaring saham-saham yang sedang berada dekat dengan zona support, yaitu dalam rentang ±5% dari harga penutupan terakhir terhadap level support terdekat. 
         Zona support ditentukan berdasarkan pola harga terendah historis harian dalam periode 20 hari, yang mencerminkan potensi area pantulan harga. 
         Harap diingat bahwa alat ini tidak dimaksudkan sebagai pedoman investasi mutlak, melainkan sebagai pelengkap dalam proses analisis teknikal.
     </div>
